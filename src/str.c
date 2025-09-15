@@ -31,7 +31,7 @@ void trim_linebreak(char str[])
   }
 }
 
-struct SplitResult split_command(char cmd[], const char delim[])
+SplitResult split_command(char cmd[], const char delim[])
 {
   int bufsize = 4;
   char **argv = malloc(bufsize * sizeof(char *));
@@ -40,6 +40,9 @@ struct SplitResult split_command(char cmd[], const char delim[])
 
   while (token != NULL)
   {
+    while (*token == ' ')
+      token++;
+
     argv[argc++] = token;
     if (argc >= bufsize)
     {
@@ -50,6 +53,6 @@ struct SplitResult split_command(char cmd[], const char delim[])
   }
   argv[argc] = NULL;
 
-  struct SplitResult split = {argv, argc};
+  SplitResult split = {argv, argc};
   return split;
 }

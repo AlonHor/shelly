@@ -12,7 +12,7 @@
 
 void handle_command(char *cmd, char cwd[])
 {
-  struct SplitResult pipe_split = split_command(cmd, "|");
+  SplitResult pipe_split = split_command(cmd, "|");
   if (pipe_split.count > 1)
   {
     int prev_fd = STDIN_FILENO;
@@ -43,7 +43,7 @@ void handle_command(char *cmd, char cwd[])
           close(pipefd[1]);
         }
 
-        struct SplitResult in_split = split_command(pipe_split.tokens[i], "<");
+        SplitResult in_split = split_command(pipe_split.tokens[i], "<");
         if (in_split.count == 2)
         {
           int fd = open(in_split.tokens[1], O_RDONLY);
@@ -60,8 +60,8 @@ void handle_command(char *cmd, char cwd[])
         {
           if (i == pipe_split.count - 1)
           {
-            struct SplitResult append_split = split_command(pipe_split.tokens[i], ">>");
-            struct SplitResult out_split = split_command(pipe_split.tokens[i], ">");
+            SplitResult append_split = split_command(pipe_split.tokens[i], ">>");
+            SplitResult out_split = split_command(pipe_split.tokens[i], ">");
             if (append_split.count == 2)
             {
               int fd = open(append_split.tokens[1], O_WRONLY | O_CREAT | O_APPEND, 0644);
@@ -80,12 +80,15 @@ void handle_command(char *cmd, char cwd[])
             {
               run(pipe_split.tokens[i], STDIN_FILENO, STDOUT_FILENO, cwd);
             }
+            free(append_split.tokens);
+            free(out_split.tokens);
           }
           else
           {
             run(pipe_split.tokens[i], STDIN_FILENO, STDOUT_FILENO, cwd);
           }
         }
+        free(in_split.tokens);
         exit(0);
       }
 
@@ -100,12 +103,15 @@ void handle_command(char *cmd, char cwd[])
 
     for (int i = 0; i < pipe_split.count; i++)
       wait(NULL);
+
+    free(pipe_split.tokens);
     return;
   }
+  free(pipe_split.tokens);
 
-  struct SplitResult append_split = split_command(cmd, ">>");
-  struct SplitResult out_split = split_command(cmd, ">");
-  struct SplitResult in_split = split_command(cmd, "<");
+  SplitResult append_split = split_command(cmd, ">>");
+  SplitResult out_split = split_command(cmd, ">");
+  SplitResult in_split = split_command(cmd, "<");
 
   if (append_split.count == 2)
   {
@@ -129,6 +135,10 @@ void handle_command(char *cmd, char cwd[])
   {
     run(cmd, STDIN_FILENO, STDOUT_FILENO, cwd);
   }
+
+  free(append_split.tokens);
+  free(out_split.tokens);
+  free(in_split.tokens);
 }
 
 int main()
@@ -139,7 +149,7 @@ int main()
   while (1)
   {
     getcwd(cwd, sizeof(cwd));
-    printf("SHELLY [%s] ", cwd);
+    printf("\nSHELLY [%s] ", cwd);
 
     if (fgets(input_buffer, sizeof(input_buffer), stdin) == NULL)
       break;

@@ -10,11 +10,14 @@
 int matches_internal(char *a, char *b)
 {
   char *cmd_cpy = strdup(b);
-  if (strncmp(a, split_command(cmd_cpy, " ").tokens[0], strlen(a)) == 0)
+  SplitResult split_result = split_command(cmd_cpy, " ");
+  if (strncmp(a, split_result.tokens[0], strlen(a)) == 0)
   {
     free(cmd_cpy);
+    free(split_result.tokens);
     return 1;
   }
+  free(split_result.tokens);
   free(cmd_cpy);
   return 0;
 }
@@ -29,7 +32,6 @@ void run(char *cmd, int stdin_fd, int stdout_fd, char *cwd)
     return;
   }
 
-  printf("gonna run %s\n", cmd);
   pid_t pid = fork();
   if (pid == -1)
   {
@@ -63,7 +65,8 @@ void run(char *cmd, int stdin_fd, int stdout_fd, char *cwd)
     char **argv = split_command(copy, " ").tokens;
 
     execvp(argv[0], argv);
-    perror("execvp");
+    free(argv);
+    perror("Error");
     exit(1);
   }
   else if (pid < 0)

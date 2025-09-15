@@ -4,12 +4,12 @@
 void to_lowercase(char str[], char stop);
 void trim_linebreak(char str[]);
 
-struct SplitResult
+typedef struct SplitResult
 {
   char **tokens;
   int count;
-};
+} SplitResult;
 
-struct SplitResult split_command(char cmd[], const char delim[]);
+SplitResult split_command(char cmd[], const char delim[]);
 
 #endif
