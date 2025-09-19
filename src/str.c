@@ -6,28 +6,26 @@
 
 void to_lowercase(char str[], char stop)
 {
-  char *pCh = &str[0];
-  while (*pCh != stop)
+  while (*str != stop && *str != '\0')
   {
-    if (*pCh >= 'A' && *pCh <= 'Z')
-      *pCh += ' ';
+    if (*str >= 'A' && *str <= 'Z')
+      *str += ' ';
 
-    pCh += sizeof(char);
+    str++;
   }
 }
 
 void trim_linebreak(char str[])
 {
-  char *pCh = &str[0];
-  while (*pCh != '\0')
+  while (*str != '\0')
   {
-    if (*pCh == '\n')
+    if (*str == '\n')
     {
-      *pCh = '\0';
+      *str = '\0';
       break;
     }
 
-    pCh += sizeof(char);
+    str++;
   }
 }
 

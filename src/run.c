@@ -1,36 +1,153 @@
 #include "run.h"
 #include "str.h"
+#include "internal.h"
 
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <sys/wait.h>
 #include <stdlib.h>
+#include <fcntl.h>
 
-int matches_internal(char *a, char *b)
+void handle_command(char *cmd, char cwd[])
 {
-  char *cmd_cpy = strdup(b);
-  SplitResult split_result = split_command(cmd_cpy, " ");
-  if (strncmp(a, split_result.tokens[0], strlen(a)) == 0)
+  SplitResult pipe_split = split_command(cmd, "|");
+  if (pipe_split.count > 1)
   {
-    free(cmd_cpy);
-    free(split_result.tokens);
-    return 1;
+    int prev_fd = STDIN_FILENO;
+    for (int i = 0; i < pipe_split.count; i++)
+    {
+      int pipefd[2] = {-1, -1};
+      if (i != pipe_split.count - 1)
+      {
+        if (pipe(pipefd) == -1)
+        {
+          perror("pipe");
+          exit(1);
+        }
+      }
+
+      pid_t pid = fork();
+      if (pid == 0)
+      {
+        if (prev_fd != STDIN_FILENO)
+        {
+          dup2(prev_fd, STDIN_FILENO);
+          close(prev_fd);
+        }
+        if (i != pipe_split.count - 1)
+        {
+          dup2(pipefd[1], STDOUT_FILENO);
+          close(pipefd[0]);
+          close(pipefd[1]);
+        }
+
+        SplitResult in_split = split_command(pipe_split.tokens[i], "<");
+        if (in_split.count == 2)
+        {
+          int fd = open(in_split.tokens[1], O_RDONLY);
+          if (fd < 0)
+          {
+            perror("open");
+            exit(1);
+          }
+          dup2(fd, STDIN_FILENO);
+          close(fd);
+          run(in_split.tokens[0], STDIN_FILENO, STDOUT_FILENO, cwd);
+        }
+        else
+        {
+          if (i == pipe_split.count - 1)
+          {
+            SplitResult append_split = split_command(pipe_split.tokens[i], ">>");
+            SplitResult out_split = split_command(pipe_split.tokens[i], ">");
+            if (append_split.count == 2)
+            {
+              int fd = open(append_split.tokens[1], O_WRONLY | O_CREAT | O_APPEND, 0644);
+              dup2(fd, STDOUT_FILENO);
+              close(fd);
+              run(append_split.tokens[0], STDIN_FILENO, STDOUT_FILENO, cwd);
+            }
+            else if (out_split.count == 2)
+            {
+              int fd = open(out_split.tokens[1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+              dup2(fd, STDOUT_FILENO);
+              close(fd);
+              run(out_split.tokens[0], STDIN_FILENO, STDOUT_FILENO, cwd);
+            }
+            else
+            {
+              run(pipe_split.tokens[i], STDIN_FILENO, STDOUT_FILENO, cwd);
+            }
+            free(append_split.tokens);
+            free(out_split.tokens);
+          }
+          else
+          {
+            run(pipe_split.tokens[i], STDIN_FILENO, STDOUT_FILENO, cwd);
+          }
+        }
+        free(in_split.tokens);
+        exit(0);
+      }
+
+      if (prev_fd != STDIN_FILENO)
+        close(prev_fd);
+      if (i != pipe_split.count - 1)
+      {
+        close(pipefd[1]);
+        prev_fd = pipefd[0];
+      }
+    }
+
+    for (int i = 0; i < pipe_split.count; i++)
+      wait(NULL);
+
+    free(pipe_split.tokens);
+    return;
   }
-  free(split_result.tokens);
-  free(cmd_cpy);
-  return 0;
+  free(pipe_split.tokens);
+
+  SplitResult append_split = split_command(cmd, ">>");
+  SplitResult out_split = split_command(cmd, ">");
+  SplitResult in_split = split_command(cmd, "<");
+
+  if (append_split.count == 2)
+  {
+    int fd = open(append_split.tokens[1], O_WRONLY | O_CREAT | O_APPEND, 0644);
+    run(append_split.tokens[0], STDIN_FILENO, fd, cwd);
+    close(fd);
+  }
+  else if (out_split.count == 2)
+  {
+    int fd = open(out_split.tokens[1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    run(out_split.tokens[0], STDIN_FILENO, fd, cwd);
+    close(fd);
+  }
+  else if (in_split.count == 2)
+  {
+    int fd = open(in_split.tokens[1], O_RDONLY);
+    run(in_split.tokens[0], fd, STDOUT_FILENO, cwd);
+    close(fd);
+  }
+  else
+  {
+    run(cmd, STDIN_FILENO, STDOUT_FILENO, cwd);
+  }
+
+  free(append_split.tokens);
+  free(out_split.tokens);
+  free(in_split.tokens);
 }
 
 void run(char *cmd, int stdin_fd, int stdout_fd, char *cwd)
 {
   to_lowercase(cmd, ' ');
 
-  if (matches_internal("cd", cmd))
-  {
-    chdir(cmd + sizeof(char) * 3);
+  char *copy_noproc = strdup(cmd);
+  int found_internal_noproc = handle_internal(copy_noproc, 0);
+  if (found_internal_noproc)
     return;
-  }
 
   pid_t pid = fork();
   if (pid == -1)
@@ -64,9 +181,16 @@ void run(char *cmd, int stdin_fd, int stdout_fd, char *cwd)
     char *copy = strdup(cmd);
     char **argv = split_command(copy, " ").tokens;
 
-    execvp(argv[0], argv);
-    free(argv);
-    perror("Error");
+    int found_internal = handle_internal(copy, 1);
+    if (found_internal)
+      free(argv);
+    else
+    {
+      execvp(argv[0], argv);
+      free(argv);
+      perror("Error");
+    }
+
     exit(1);
   }
   else if (pid < 0)
