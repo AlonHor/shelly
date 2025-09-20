@@ -6,10 +6,35 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <dirent.h>
 
 void cd(char *args[])
 {
   chdir(args[0]);
+}
+
+void dir(char *args[])
+{
+  char path[256] = ".";
+  if (*args[0] != 5)
+    memcpy(path, args[0], 256);
+
+  DIR *dir;
+  struct dirent *ent;
+  if ((dir = opendir(path)) != NULL)
+  {
+    while ((ent = readdir(dir)) != NULL)
+    {
+      char type[5] = "FILE";
+      if (ent->d_type == 4)
+        memcpy(type, "DIR ", 5);
+      char spacing[] = "     ";
+      printf("%s %s %s\n", type, spacing, ent->d_name);
+    }
+    closedir(dir);
+  }
+  else
+    perror("");
 }
 
 void foo(char *args[])
@@ -28,6 +53,7 @@ struct FuncMap
 
 struct FuncMap internal_proc_functions[] = {
     {"foo", foo},
+    {"dir", dir},
     {NULL, NULL}};
 
 struct FuncMap internal_noproc_functions[] = {

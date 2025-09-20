@@ -22,6 +22,9 @@ int main()
       break;
 
     trim_linebreak(input_buffer);
+    if (input_buffer[0] == '\0')
+      continue;
+
     handle_command(input_buffer, cwd);
   }
   return 0;
