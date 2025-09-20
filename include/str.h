@@ -10,6 +10,6 @@ typedef struct SplitResult
   int count;
 } SplitResult;
 
-SplitResult split_command(char cmd[], const char delim[]);
+SplitResult split_command(char cmd[], const char delim[], int limit);
 
 #endif

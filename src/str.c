@@ -29,14 +29,14 @@ void trim_linebreak(char str[])
   }
 }
 
-SplitResult split_command(char cmd[], const char delim[])
+SplitResult split_command(char cmd[], const char delim[], int limit)
 {
   int bufsize = 4;
   char **argv = malloc(bufsize * sizeof(char *));
   int argc = 0;
   char *token = strtok(cmd, delim);
 
-  while (token != NULL)
+  while (token != NULL && limit > 0)
   {
     while (*token == ' ')
       token++;
@@ -47,7 +47,10 @@ SplitResult split_command(char cmd[], const char delim[])
       bufsize *= 2;
       argv = realloc(argv, bufsize * sizeof(char *));
     }
-    token = strtok(NULL, delim);
+
+    limit--;
+    if (limit > 0)
+      token = strtok(NULL, delim);
   }
   argv[argc] = NULL;
 

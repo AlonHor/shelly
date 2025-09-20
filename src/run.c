@@ -11,7 +11,7 @@
 
 void handle_command(char *cmd, char cwd[])
 {
-  SplitResult pipe_split = split_command(cmd, "|");
+  SplitResult pipe_split = split_command(cmd, "|", 128);
   if (pipe_split.count > 1)
   {
     int prev_fd = STDIN_FILENO;
@@ -42,7 +42,7 @@ void handle_command(char *cmd, char cwd[])
           close(pipefd[1]);
         }
 
-        SplitResult in_split = split_command(pipe_split.tokens[i], "<");
+        SplitResult in_split = split_command(pipe_split.tokens[i], "<", 128);
         if (in_split.count == 2)
         {
           int fd = open(in_split.tokens[1], O_RDONLY);
@@ -59,8 +59,8 @@ void handle_command(char *cmd, char cwd[])
         {
           if (i == pipe_split.count - 1)
           {
-            SplitResult append_split = split_command(pipe_split.tokens[i], ">>");
-            SplitResult out_split = split_command(pipe_split.tokens[i], ">");
+            SplitResult append_split = split_command(pipe_split.tokens[i], ">>", 128);
+            SplitResult out_split = split_command(pipe_split.tokens[i], ">", 128);
             if (append_split.count == 2)
             {
               int fd = open(append_split.tokens[1], O_WRONLY | O_CREAT | O_APPEND, 0644);
@@ -108,9 +108,9 @@ void handle_command(char *cmd, char cwd[])
   }
   free(pipe_split.tokens);
 
-  SplitResult append_split = split_command(cmd, ">>");
-  SplitResult out_split = split_command(cmd, ">");
-  SplitResult in_split = split_command(cmd, "<");
+  SplitResult append_split = split_command(cmd, ">>", 128);
+  SplitResult out_split = split_command(cmd, ">", 128);
+  SplitResult in_split = split_command(cmd, "<", 128);
 
   if (append_split.count == 2)
   {
@@ -179,9 +179,9 @@ void run(char *cmd, int stdin_fd, int stdout_fd, char *cwd)
     }
 
     char *copy = strdup(cmd);
-    char **argv = split_command(copy, " ").tokens;
+    char **argv = split_command(copy, " ", 128).tokens;
 
-    int found_internal = handle_internal(copy, 1);
+    int found_internal = handle_internal(cmd, 1);
     if (found_internal)
       free(argv);
     else
