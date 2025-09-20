@@ -51,7 +51,11 @@ void copy(char *args[])
   FILE *src_f, *dst_f;
   if ((src_f = fopen(src, "r")) == NULL)
     return;
-  dst_f = fopen(dst, "w");
+  if ((dst_f = fopen(dst, "w")) == NULL)
+  {
+    fclose(src_f);
+    return;
+  }
 
   char ch;
   while ((ch = fgetc(src_f)) != EOF)
@@ -125,7 +129,8 @@ int handle_internal(char *full_command, int proc)
 
   char *command_name = full_command_split.tokens[0];
   char *args_str = command_name + strlen(command_name) + 1;
-  char *args_str_copy = strdup(args_str);
+  char args_str_copy[strlen(args_str) + 1];
+  memcpy(args_str_copy, args_str, strlen(args_str) + 1);
 
   SplitResult args_split = split_command(args_str_copy, " ", 128);
 
@@ -138,7 +143,6 @@ int handle_internal(char *full_command, int proc)
   }
 
   free(full_command_split.tokens);
-  free(args_str_copy);
   free(args_split.tokens);
 
   return found_internal;

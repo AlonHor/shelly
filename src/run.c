@@ -64,14 +64,16 @@ void handle_command(char *cmd, char cwd[])
             if (append_split.count == 2)
             {
               int fd = open(append_split.tokens[1], O_WRONLY | O_CREAT | O_APPEND, 0644);
-              dup2(fd, STDOUT_FILENO);
+              if (fd > 0)
+                dup2(fd, STDOUT_FILENO);
               close(fd);
               run(append_split.tokens[0], STDIN_FILENO, STDOUT_FILENO, cwd);
             }
             else if (out_split.count == 2)
             {
               int fd = open(out_split.tokens[1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-              dup2(fd, STDOUT_FILENO);
+              if (fd > 0)
+                dup2(fd, STDOUT_FILENO);
               close(fd);
               run(out_split.tokens[0], STDIN_FILENO, STDOUT_FILENO, cwd);
             }
@@ -144,7 +146,8 @@ void run(char *cmd, int stdin_fd, int stdout_fd, char *cwd)
 {
   to_lowercase(cmd, ' ');
 
-  char *copy_noproc = strdup(cmd);
+  char copy_noproc[strlen(cmd) + 1];
+  memcpy(copy_noproc, cmd, strlen(cmd) + 1);
   int found_internal_noproc = handle_internal(copy_noproc, 0);
   if (found_internal_noproc)
     return;
@@ -167,18 +170,19 @@ void run(char *cmd, int stdin_fd, int stdout_fd, char *cwd)
       }
     }
 
-    if (stdin_fd != STDIN_FILENO)
+    if (stdin_fd != STDIN_FILENO && stdin_fd > 0)
     {
       dup2(stdin_fd, STDIN_FILENO);
       close(stdin_fd);
     }
-    if (stdout_fd != STDOUT_FILENO)
+    if (stdout_fd != STDOUT_FILENO && stdout_fd > 0)
     {
       dup2(stdout_fd, STDOUT_FILENO);
       close(stdout_fd);
     }
 
-    char *copy = strdup(cmd);
+    char copy[strlen(cmd) + 1];
+    memcpy(copy, cmd, strlen(cmd) + 1);
     char **argv = split_command(copy, " ", 128).tokens;
 
     int found_internal = handle_internal(cmd, 1);
