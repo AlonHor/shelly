@@ -8,9 +8,12 @@
 #include <stdio.h>
 #include <dirent.h>
 
+extern char **environ;
+
 void cd(char *args[])
 {
-  chdir(args[0]);
+  if (chdir(args[0]))
+    printf("Error: Path not found\n");
 }
 
 void dir(char *args[])
@@ -37,7 +40,7 @@ void dir(char *args[])
     closedir(dir);
   }
   else
-    perror("");
+    printf("Error: Path not found\n");
 }
 
 void copy(char *args[])
@@ -58,6 +61,22 @@ void copy(char *args[])
   fclose(dst_f);
 }
 
+void set(char *args[])
+{
+  if (args[0] == NULL)
+  {
+    for (char **env = environ; *env != NULL; env++)
+      printf("%s\n", *env);
+    return;
+  }
+
+  char *value;
+  if ((value = getenv(args[0])) != NULL)
+    printf("%s=%s\n", args[0], value);
+  else
+    printf("Error: Environment variable not found\n");
+}
+
 void foo(char *args[])
 {
   (void)args;
@@ -76,6 +95,7 @@ struct FuncMap internal_proc_functions[] = {
     {"foo", foo},
     {"dir", dir},
     {"copy", copy},
+    {"set", set},
     {NULL, NULL}};
 
 struct FuncMap internal_noproc_functions[] = {
