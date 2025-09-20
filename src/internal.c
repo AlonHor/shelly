@@ -14,6 +14,7 @@ void cd(char *args[])
 
 void foo(char *args[])
 {
+  (void)args;
   printf("bar!\n");
 }
 
