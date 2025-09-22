@@ -78,13 +78,74 @@ void set(char *args[])
   if ((value = getenv(args[0])) != NULL)
     printf("%s=%s\n", args[0], value);
   else
-    printf("Error: Environment variable not found\n");
+  {
+    char args_copy[strlen(args[0]) + 1];
+    memcpy(args_copy, args[0], strlen(args[0]) + 1);
+
+    SplitResult key_value_split = split_command(args[0], "=", 2);
+
+    if (strcmp(key_value_split.tokens[0], args_copy) == 0)
+    {
+      printf("Error: Environment variable [%s] not found\n", args[0]);
+      free(key_value_split.tokens);
+      return;
+    }
+
+    char key[128];
+    char value[128];
+
+    strcpy(key, key_value_split.tokens[0]);
+    strcpy(value, key_value_split.tokens[1]);
+
+    printf("key=[%s]\n", key);
+    printf("value=[%s]\n", value);
+
+    setenv(key, value, 1);
+
+    free(key_value_split.tokens);
+  }
 }
 
-void foo(char *args[])
+void help(char *args[])
 {
-  (void)args;
-  printf("bar!\n");
+  if (args[0] == NULL)
+  {
+    printf("Welcome to the help menu!\n");
+    printf("Available commands:\n");
+    printf("  dir  - List the contents of the current directory.\n");
+    printf("  help - Show information about available commands.\n");
+    printf("  set  - Set or display environment variables.\n");
+    printf("  cd   - Change the current working directory.\n");
+    return;
+  }
+
+  if (strcmp(args[0], "dir") == 0)
+  {
+    printf("dir: Lists the contents of a directory.\n");
+    printf("Usage: dir [directory]\n");
+    printf("If no directory is specified, shows contents on the current directory.\n");
+  }
+  else if (strcmp(args[0], "help") == 0)
+  {
+    printf("help: Shows information about available commands.\n");
+    printf("Usage: help [command]\n");
+    printf("If a command is specified, displays detailed help for that command.\n");
+  }
+  else if (strcmp(args[0], "set") == 0)
+  {
+    printf("set: Sets or displays environment variables.\n");
+    printf("Usage: set [VARIABLE=VALUE]\n");
+    printf("If no arguments are given, displays all environment variables.\n");
+  }
+  else if (strcmp(args[0], "cd") == 0)
+  {
+    printf("cd: Changes the current working directory.\n");
+    printf("Usage: cd [directory]\n");
+  }
+  else
+  {
+    printf("No help available for '%s'.\n", args[0]);
+  }
 }
 
 typedef void (*func_t)(char **);
@@ -96,14 +157,14 @@ struct FuncMap
 };
 
 struct FuncMap internal_proc_functions[] = {
-    {"foo", foo},
     {"dir", dir},
     {"copy", copy},
-    {"set", set},
+    {"help", help},
     {NULL, NULL}};
 
 struct FuncMap internal_noproc_functions[] = {
     {"cd", cd},
+    {"set", set},
     {NULL, NULL}};
 
 func_t get_internal(const char *cmd, int proc)
@@ -154,6 +215,7 @@ int try_handle_path_command(const char *cmd, SplitResult args_split, char *path_
 
           free(path_split.tokens);
           free(exec_cmd);
+          free(argv);
 
           closedir(dir);
 
@@ -171,6 +233,8 @@ int try_handle_path_command(const char *cmd, SplitResult args_split, char *path_
 
 int handle_internal(char *full_command, int proc)
 {
+  char full_command_copy[strlen(full_command) + 1];
+  memcpy(full_command_copy, full_command, strlen(full_command) + 1);
   SplitResult full_command_split = split_command(full_command, " ", 1);
 
   char *command_name = full_command_split.tokens[0];
@@ -184,7 +248,14 @@ int handle_internal(char *full_command, int proc)
   int found_internal = 0;
   if (internal != NULL)
   {
-    internal(args_split.tokens);
+    if (strcmp(command_name, full_command_copy) == 0)
+    {
+      char *null_char = NULL;
+      char **null_args = &null_char;
+      internal(null_args);
+    }
+    else
+      internal(args_split.tokens);
     found_internal = 1;
   }
 
