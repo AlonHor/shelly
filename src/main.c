@@ -1,10 +1,10 @@
+#include "str.h"
+#include "run.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include "str.h"
-#include "run.h"
 
 #define N 0x43 / 10 + (0x43 % 10 * 0.1)
 
