@@ -29,7 +29,7 @@ void trim_linebreak(char str[])
   }
 }
 
-SplitResult split_command(char cmd[], const char delim[], int limit)
+SplitResult split_command(char *cmd, const char *delim, int limit)
 {
   int bufsize = 4;
   char **argv = malloc(bufsize * sizeof(char *));

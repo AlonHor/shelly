@@ -146,10 +146,11 @@ void run(char *cmd, int stdin_fd, int stdout_fd, char *cwd)
 {
   to_lowercase(cmd, ' ');
 
-  char copy_noproc[strlen(cmd) + 1];
-  memcpy(copy_noproc, cmd, strlen(cmd) + 1);
-  int found_internal_noproc = handle_internal(copy_noproc, 0);
-  if (found_internal_noproc)
+  char copy_noproc_internal[strlen(cmd) + 1];
+
+  memcpy(copy_noproc_internal, cmd, strlen(cmd) + 1);
+
+  if (handle_internal(copy_noproc_internal, 0))
     return;
 
   pid_t pid = fork();
@@ -183,10 +184,15 @@ void run(char *cmd, int stdin_fd, int stdout_fd, char *cwd)
 
     char copy[strlen(cmd) + 1];
     memcpy(copy, cmd, strlen(cmd) + 1);
+
+    char path_copy[strlen(cmd) + 1];
+    memcpy(path_copy, cmd, strlen(cmd) + 1);
+
     char **argv = split_command(copy, " ", 128).tokens;
 
-    int found_internal = handle_internal(cmd, 1);
-    if (found_internal)
+    if (handle_internal(cmd, 1))
+      free(argv);
+    else if (handle_path(path_copy))
       free(argv);
     else
     {

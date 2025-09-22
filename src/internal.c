@@ -123,6 +123,52 @@ func_t get_internal(const char *cmd, int proc)
   return NULL;
 }
 
+int try_handle_path_command(const char *cmd, SplitResult args_split, char *path_value)
+{
+  SplitResult path_split = split_command(path_value, ":", 512);
+
+  DIR *dir;
+  struct dirent *ent;
+  for (int i = 0; i < path_split.count; i++)
+  {
+    char *path = path_split.tokens[i];
+    if ((dir = opendir(path)) != NULL)
+    {
+      while ((ent = readdir(dir)) != NULL)
+      {
+        if (ent->d_type != 8)
+          continue;
+
+        if (strcmp(ent->d_name, cmd) == 0)
+        {
+          char *exec_cmd = malloc(sizeof(char) * 1024);
+          sprintf(exec_cmd, "%s/%s", path, cmd);
+
+          char **argv = malloc(sizeof(char *) * 512);
+          argv[0] = exec_cmd;
+
+          for (int i = 1; i < args_split.count + 1; i++)
+            argv[i] = args_split.tokens[i - 1];
+
+          execvp(exec_cmd, argv);
+
+          free(path_split.tokens);
+          free(exec_cmd);
+
+          closedir(dir);
+
+          return 1;
+        }
+      }
+    }
+    closedir(dir);
+  }
+
+  free(path_split.tokens);
+
+  return 0;
+}
+
 int handle_internal(char *full_command, int proc)
 {
   SplitResult full_command_split = split_command(full_command, " ", 1);
@@ -146,4 +192,35 @@ int handle_internal(char *full_command, int proc)
   free(args_split.tokens);
 
   return found_internal;
+}
+
+int handle_path(char *full_command)
+{
+  char full_command_copy[strlen(full_command) + 1];
+  memcpy(full_command_copy, full_command, strlen(full_command) + 1);
+  SplitResult full_command_split = split_command(full_command, " ", 1);
+
+  char *command_name = full_command_split.tokens[0];
+  char *args_str = command_name + strlen(command_name) + 1;
+  char args_str_copy[strlen(args_str) + 1];
+  memcpy(args_str_copy, args_str, strlen(args_str) + 1);
+
+  SplitResult args_split = split_command(args_str_copy, " ", 128);
+
+  if (strcmp(full_command_split.tokens[0], full_command_copy) == 0)
+    args_split.count = 0;
+
+  char *path_value;
+  if ((path_value = getenv("PATH")) == NULL)
+    return 0;
+
+  char path_value_copy[strlen(path_value) + 1];
+  memcpy(path_value_copy, path_value, strlen(path_value) + 1);
+
+  int found_path = try_handle_path_command(command_name, args_split, path_value_copy);
+
+  free(full_command_split.tokens);
+  free(args_split.tokens);
+
+  return found_path;
 }
