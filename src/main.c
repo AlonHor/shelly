@@ -19,7 +19,7 @@ int main(int argc, char **argv)
   while (1)
   {
     getcwd(cwd, sizeof(cwd));
-    printf("\nAlon@SHELLY [%s] ", cwd);
+    printf("\nSHELLY # [%s] ", cwd);
 
     if (fgets(input_buffer, sizeof(input_buffer), stdin) == NULL)
       break;
