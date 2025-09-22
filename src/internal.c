@@ -148,6 +148,40 @@ void help(char *args[])
   }
 }
 
+void type(char *args[])
+{
+  if (args[0] == NULL)
+  {
+    printf("Error: No file specified\n");
+    return;
+  }
+
+  FILE *file = fopen(args[0], "r");
+  if (!file)
+  {
+    printf("Error: Cannot open file '%s'\n", args[0]);
+    return;
+  }
+
+  int c;
+  while ((c = fgetc(file)) != EOF)
+    putchar(c);
+  fclose(file);
+}
+
+void cls(char *args[])
+{
+  (void)args;
+  system("clear");
+  printf("\033[2J\033[H");
+}
+
+void exit_i(char *args[])
+{
+  (void)args;
+  exit(0);
+}
+
 typedef void (*func_t)(char **);
 
 struct FuncMap
@@ -160,11 +194,14 @@ struct FuncMap internal_proc_functions[] = {
     {"dir", dir},
     {"copy", copy},
     {"help", help},
+    {"type", type},
     {NULL, NULL}};
 
 struct FuncMap internal_noproc_functions[] = {
     {"cd", cd},
     {"set", set},
+    {"cls", cls},
+    {"exit", exit_i},
     {NULL, NULL}};
 
 func_t get_internal(const char *cmd, int proc)
