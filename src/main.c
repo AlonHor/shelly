@@ -1,5 +1,5 @@
-#include "str.h"
 #include "run.h"
+#include "str.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,16 +8,14 @@
 
 #define N 0x43 / 10 + (0x43 % 10 * 0.1)
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   char input_buffer[512];
   char cwd[128];
 
   if (argc > 1)
     chdir(argv[1]);
 
-  while (1)
-  {
+  while (1) {
     getcwd(cwd, sizeof(cwd));
     printf("\nSHELLY # [%s] ", cwd);
 
